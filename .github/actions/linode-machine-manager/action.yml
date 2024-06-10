@@ -17,7 +17,7 @@ runs:
   using: 'composite'
   steps:
     - name: Checkout action repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v2
 
     - name: Set up Node.js
       uses: actions/setup-node@v2
@@ -26,6 +26,8 @@ runs:
 
     - name: Install dependencies
       run: npm install
+      shell: bash
 
     - name: Run main script
       run: node index.js
+      shell: bash
