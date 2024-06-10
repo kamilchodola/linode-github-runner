@@ -27,7 +27,9 @@ runs:
     - name: Install dependencies
       run: npm install
       shell: bash
+      working-directory: .github/actions/linode-machine-manager
 
     - name: Run main script
       run: node index.js
       shell: bash
+      working-directory: .github/actions/linode-machine-manager
