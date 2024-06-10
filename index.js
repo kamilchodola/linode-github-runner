@@ -41,6 +41,8 @@ async function run() {
 
       execSync(`ssh -o StrictHostKeyChecking=no root@${ipv4} '${runnerScript}'`);
 
+      core.setOutput('runner_label', runnerLabel);
+
     } else if (action === 'destroy') {
       if (!machineId) {
         throw new Error('Machine ID is required for destruction');
