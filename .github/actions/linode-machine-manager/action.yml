@@ -19,9 +19,18 @@ inputs:
   runner_label:
     description: 'Base label for the self-hosted runner'
     required: false
+  root_password:
+    description: 'Root password for the new Linode machine'
+    required: true
+  machine_type:
+    description: 'Type of Linode machine to create'
+    required: true
+  image:
+    description: 'Image to use for the Linode machine'
+    required: true
 outputs:
   runner_label:
-    description: 'Label of the self-hosted runner'
+    description: 'Final label of the self-hosted runner'
     required: false
 runs:
   using: 'composite'
