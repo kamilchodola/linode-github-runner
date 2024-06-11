@@ -11,14 +11,17 @@ async function run() {
     const machineId = core.getInput('machine_id');
     const searchPhrase = core.getInput('search_phrase');
     const baseLabel = core.getInput('runner_label') || 'self-hosted';
+    const rootPassword = core.getInput('root_password');
+    const machineType = core.getInput('machine_type');
+    const image = core.getInput('image');
     const linodeClient = new LinodeClient(linodeToken);
 
     if (action === 'create') {
       const linode = await linodeClient.linodeInstances.create({
         region: 'us-east',
-        type: 'g6-standard-1',
-        image: 'linode/ubuntu22.04',
-        root_pass: 'your-secure-password'
+        type: machineType,
+        image: image,
+        root_pass: rootPassword
       });
 
       const { id, ipv4 } = linode;
