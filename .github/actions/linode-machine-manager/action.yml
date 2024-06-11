@@ -39,6 +39,9 @@ runs:
       with:
         node-version: '14'
 
+    - run: ls
+      shell: bash      
+
     - name: Install dependencies
       run: npm install
       shell: bash
