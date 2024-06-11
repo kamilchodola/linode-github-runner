@@ -13,8 +13,11 @@ inputs:
   machine_id:
     description: 'ID of the machine to destroy'
     required: false
+  search_phrase:
+    description: 'Search phrase to find the machine to destroy'
+    required: false
   runner_label:
-    description: 'Label for the self-hosted runner'
+    description: 'Base label for the self-hosted runner'
     required: false
 outputs:
   runner_label:
