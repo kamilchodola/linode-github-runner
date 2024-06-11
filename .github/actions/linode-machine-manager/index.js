@@ -2,7 +2,6 @@ const core = require('@actions/core');
 const { LinodeClient } = require('@linode/api-v4');
 const { execSync } = require('child_process');
 const axios = require('axios');
-const { execSync } = require('child_process');
 
 execSync('npm install', { stdio: 'inherit' });
 
