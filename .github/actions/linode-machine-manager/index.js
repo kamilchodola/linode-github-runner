@@ -2,6 +2,8 @@ const core = require('@actions/core');
 const { execSync } = require('child_process');
 const { setToken, createLinode, deleteLinode, listLinodes } = require('@linode/api-v4');
 const axios = require('axios');
+const util = require('util');
+const sleep = util.promisify(setTimeout);
 
 // Set the Linode API token
 const linodeToken = core.getInput('linode_token');
