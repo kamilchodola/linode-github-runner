@@ -28,6 +28,9 @@ inputs:
   image:
     description: 'Image to use for the Linode machine'
     required: true
+  tags:
+    description: 'Comma-separated list of tags for the Linode instance'
+    required: false
 outputs:
   runner_label:
     description: 'Final label of the self-hosted runner'
