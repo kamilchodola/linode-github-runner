@@ -17,7 +17,9 @@ async function run() {
     const rootPassword = core.getInput('root_password');
     const machineType = core.getInput('machine_type');
     const image = core.getInput('image');
-    const githubRunId = core.getInput('github_run_id');
+
+    const repoFullName = process.env.GITHUB_REPOSITORY;
+    const [repoOwner, repoName] = repoFullName.split('/');
 
     if (action === 'create') {
       const linode = await createLinode({
@@ -31,18 +33,24 @@ async function run() {
       core.setOutput('machine_id', id);
       core.setOutput('machine_ip', ipv4);
 
-      const registrationToken = await axios.post(`https://api.github.com/repos/owner/repo/actions/runners/registration-token`, {}, {
-        headers: {
-          Authorization: `Bearer ${githubToken}`,
-          Accept: 'application/vnd.github.v3+json'
+      const registrationTokenResponse = await axios.post(
+        `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${githubToken}`,
+            Accept: 'application/vnd.github.v3+json'
+          }
         }
-      });
+      );
+
+      const registrationToken = registrationTokenResponse.data.token;
 
       const runnerScript = `
         mkdir actions-runner && cd actions-runner
         curl -o actions-runner-linux-x64-2.284.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.284.0/actions-runner-linux-x64-2.284.0.tar.gz
         tar xzf ./actions-runner-linux-x64-2.284.0.tar.gz
-        ./config.sh --url https://github.com/owner/repo --token ${registrationToken.data.token} --labels ${finalLabel}
+        ./config.sh --url https://github.com/${repoOwner}/${repoName} --token ${registrationToken} --labels ${finalLabel}
         ./svc.sh install
         ./svc.sh start
       `;
