@@ -1,6 +1,6 @@
 const core = require('@actions/core');
 const { execSync } = require('child_process');
-const Linode = require('@linode/api-v4').default;
+const Linode = require('@linode/api-v4').LinodeClient;
 const axios = require('axios');
 
 async function run() {
