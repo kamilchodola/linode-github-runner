@@ -3,8 +3,6 @@ const { LinodeClient } = require('@linode/api-v4');
 const { execSync } = require('child_process');
 const axios = require('axios');
 
-execSync('npm install', { stdio: 'inherit' });
-
 async function run() {
   try {
     const linodeToken = core.getInput('linode_token');
