@@ -57,7 +57,7 @@ async function run() {
 
       execSync(`ssh -o StrictHostKeyChecking=no root@${ipv4} '${runnerScript}'`);
 
-      core.setOutput('runner_label', finalLabel);
+      core.setOutput('runner_label', baseLabel);
 
     } else if (action === 'destroy') {
       if (machineId) {
