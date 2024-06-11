@@ -1,6 +1,6 @@
 const core = require('@actions/core');
-const { LinodeClient } = require('@linode/api-v4');
 const { execSync } = require('child_process');
+const Linode = require('@linode/api-v4').default;
 const axios = require('axios');
 
 async function run() {
@@ -14,7 +14,8 @@ async function run() {
     const rootPassword = core.getInput('root_password');
     const machineType = core.getInput('machine_type');
     const image = core.getInput('image');
-    const linodeClient = new LinodeClient(linodeToken);
+    const githubRunId = core.getInput('github_run_id');
+    const linodeClient = new Linode(linodeToken);
 
     if (action === 'create') {
       const linode = await linodeClient.linodeInstances.create({
