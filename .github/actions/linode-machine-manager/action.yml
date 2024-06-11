@@ -32,17 +32,5 @@ outputs:
   runner_label:
     description: 'Final label of the self-hosted runner'
 runs:
-  using: 'composite'
-  steps:
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '14'
-
-    - name: Install dependencies
-      run: npm install
-      shell: bash
-
-    - name: Run main script
-      run: node index.js
-      shell: bash
+  using: 'node14'
+  main: 'index.js'
