@@ -23,6 +23,7 @@ async function waitForSSH(ip, retries = 10, delay = 30000) {
 }
 
 async function run() {
+  let linodeId = null;
   try {
     const githubToken = core.getInput('github_token');
     const action = core.getInput('action');
@@ -44,10 +45,12 @@ async function run() {
         root_pass: rootPassword
       });
 
-      const { id, ipv4 } = linode;
-      core.setOutput('machine_id', id);
+      linodeId = linode.id;
+      const { ipv4 } = linode;
+      core.setOutput('machine_id', linodeId);
       core.setOutput('machine_ip', ipv4);
 
+      // Wait for the Linode instance to be ready for SSH connections
       await waitForSSH(ipv4);
 
       const registrationTokenResponse = await axios.post(
@@ -62,7 +65,6 @@ async function run() {
       );
 
       const registrationToken = registrationTokenResponse.data.token;
-
       const runnerScript = `
         mkdir actions-runner && cd actions-runner
         curl -o actions-runner-linux-x64-2.284.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.284.0/actions-runner-linux-x64-2.284.0.tar.gz
@@ -104,6 +106,14 @@ async function run() {
     }
   } catch (error) {
     core.setFailed(error.message);
+    if (linodeId) {
+      try {
+        await deleteLinode(linodeId);
+        core.info(`Linode machine ${linodeId} destroyed due to error.`);
+      } catch (cleanupError) {
+        core.error(`Failed to destroy Linode machine ${linodeId}: ${cleanupError.message}`);
+      }
+    }
   }
 }
 
