@@ -1,11 +1,14 @@
 const core = require('@actions/core');
 const { execSync } = require('child_process');
-const Linode = require('@linode/api-v4').LinodeClient;
+const { setToken, createLinode, deleteLinode, listLinodes } = require('@linode/api-v4');
 const axios = require('axios');
+
+// Set the Linode API token
+const linodeToken = core.getInput('linode_token');
+setToken(linodeToken);
 
 async function run() {
   try {
-    const linodeToken = core.getInput('linode_token');
     const githubToken = core.getInput('github_token');
     const action = core.getInput('action');
     const machineId = core.getInput('machine_id');
@@ -15,10 +18,9 @@ async function run() {
     const machineType = core.getInput('machine_type');
     const image = core.getInput('image');
     const githubRunId = core.getInput('github_run_id');
-    const linodeClient = new Linode(linodeToken);
 
     if (action === 'create') {
-      const linode = await linodeClient.linodeInstances.create({
+      const linode = await createLinode({
         region: 'us-east',
         type: machineType,
         image: image,
@@ -51,18 +53,18 @@ async function run() {
 
     } else if (action === 'destroy') {
       if (machineId) {
-        await linodeClient.linodeInstances.delete(machineId);
+        await deleteLinode(machineId);
         core.info(`Linode machine ${machineId} destroyed successfully.`);
       } else if (searchPhrase) {
-        const instances = await linodeClient.linodeInstances.list();
-        const matchingInstances = instances.filter(instance => 
-          instance.label.includes(searchPhrase) || 
+        const instances = await listLinodes();
+        const matchingInstances = instances.data.filter(instance =>
+          instance.label.includes(searchPhrase) ||
           instance.tags.includes(searchPhrase)
         );
 
         if (matchingInstances.length === 1) {
           const foundMachineId = matchingInstances[0].id;
-          await linodeClient.linodeInstances.delete(foundMachineId);
+          await deleteLinode(foundMachineId);
           core.info(`Linode machine ${foundMachineId} destroyed successfully.`);
         } else if (matchingInstances.length === 0) {
           throw new Error(`No Linode instances found matching the search phrase: ${searchPhrase}`);
