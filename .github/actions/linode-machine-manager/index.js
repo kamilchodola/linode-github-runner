@@ -9,6 +9,7 @@ async function run() {
     const githubToken = core.getInput('github_token');
     const action = core.getInput('action');
     const machineId = core.getInput('machine_id');
+    const runnerLabel = core.getInput('runner_label') || `self-hosted-${Date.now()}`;
     const linodeClient = new LinodeClient(linodeToken);
 
     if (action === 'create') {
@@ -34,7 +35,7 @@ async function run() {
         mkdir actions-runner && cd actions-runner
         curl -o actions-runner-linux-x64-2.284.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.284.0/actions-runner-linux-x64-2.284.0.tar.gz
         tar xzf ./actions-runner-linux-x64-2.284.0.tar.gz
-        ./config.sh --url https://github.com/owner/repo --token ${registrationToken.data.token}
+        ./config.sh --url https://github.com/owner/repo --token ${registrationToken.data.token} --labels ${runnerLabel}
         ./svc.sh install
         ./svc.sh start
       `;
