@@ -34,3 +34,4 @@ outputs:
 runs:
   using: 'node20'
   main: 'index.js'
+  pre: 'npm install'
