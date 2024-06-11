@@ -7,6 +7,19 @@ const axios = require('axios');
 const linodeToken = core.getInput('linode_token');
 setToken(linodeToken);
 
+async function waitForSSH(ip, retries = 10, delay = 30000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      execSync(`ssh -o StrictHostKeyChecking=no root@${ip} 'echo SSH is ready'`, { stdio: 'inherit' });
+      return true;
+    } catch (error) {
+      console.log(`SSH not ready yet. Retrying in ${delay / 1000} seconds...`);
+      await sleep(delay);
+    }
+  }
+  throw new Error(`Unable to connect to ${ip} after ${retries} attempts.`);
+}
+
 async function run() {
   try {
     const githubToken = core.getInput('github_token');
@@ -32,6 +45,8 @@ async function run() {
       const { id, ipv4 } = linode;
       core.setOutput('machine_id', id);
       core.setOutput('machine_ip', ipv4);
+
+      await waitForSSH(ipv4);
 
       const registrationTokenResponse = await axios.post(
         `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`,
