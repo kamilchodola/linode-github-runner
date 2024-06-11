@@ -9,10 +9,10 @@ const sleep = util.promisify(setTimeout);
 const linodeToken = core.getInput('linode_token');
 setToken(linodeToken);
 
-async function waitForSSH(ip, retries = 10, delay = 30000) {
+async function waitForSSH(ip, rootPassword, retries = 10, delay = 30000) {
   for (let i = 0; i < retries; i++) {
     try {
-      execSync(`ssh -o StrictHostKeyChecking=no root@${ip} 'echo SSH is ready'`, { stdio: 'inherit' });
+      execSync(`sshpass -p '${rootPassword}' ssh -o StrictHostKeyChecking=no root@${ip} 'echo SSH is ready'`, { stdio: 'inherit' });
       return true;
     } catch (error) {
       console.log(`SSH not ready yet. Retrying in ${delay / 1000} seconds...`);
@@ -53,7 +53,7 @@ async function run() {
       core.setOutput('machine_ip', ipv4);
 
       // Wait for the Linode instance to be ready for SSH connections
-      await waitForSSH(ipv4);
+      await waitForSSH(ipv4, rootPassword);
 
       const registrationTokenResponse = await axios.post(
         `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`,
@@ -76,7 +76,7 @@ async function run() {
         ./svc.sh start
       `;
 
-      execSync(`ssh -o StrictHostKeyChecking=no root@${ipv4} '${runnerScript}'`);
+      execSync(`sshpass -p '${rootPassword}' ssh -o StrictHostKeyChecking=no root@${ipv4} '${runnerScript}'`);
 
       core.setOutput('runner_label', baseLabel);
 
