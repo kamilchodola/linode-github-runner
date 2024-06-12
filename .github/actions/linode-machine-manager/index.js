@@ -23,21 +23,9 @@ async function waitForSSH(ip, rootPassword, retries = 10, delay = 30000) {
 }
 
 async function unregisterRunner(repoOwner, repoName, githubToken, runnerLabel) {
-  const runners = await axios.get(
-    `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners`,
-    {
-      headers: {
-        Authorization: `Bearer ${githubToken}`,
-        Accept: 'application/vnd.github.v3+json'
-      }
-    }
-  );
-
-  const runner = runners.data.runners.find(r => r.labels.some(l => l.name === runnerLabel));
-
-  if (runner) {
-    await axios.delete(
-      `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/${runner.id}`,
+  try {
+    const runnersResponse = await axios.get(
+      `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners`,
       {
         headers: {
           Authorization: `Bearer ${githubToken}`,
@@ -45,6 +33,25 @@ async function unregisterRunner(repoOwner, repoName, githubToken, runnerLabel) {
         }
       }
     );
+
+    const runner = runnersResponse.data.runners.find(r => r.labels.some(l => l.name === runnerLabel));
+    if (runner) {
+      await axios.delete(
+        `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/${runner.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${githubToken}`,
+            Accept: 'application/vnd.github.v3+json'
+          }
+        }
+      );
+      console.log(`Runner with label ${runnerLabel} unregistered successfully.`);
+    } else {
+      console.log(`Runner with label ${runnerLabel} not found.`);
+    }
+  } catch (error) {
+    console.error(`Failed to unregister runner: ${error.message}`);
+    throw error;
   }
 }
 
