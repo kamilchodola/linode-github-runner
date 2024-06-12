@@ -1,6 +1,6 @@
 const core = require('@actions/core');
 const { execSync } = require('child_process');
-const { setToken, createLinode, deleteLinode, LinodeClient } = require('@linode/api-v4');
+const { setToken, getLinodes, createLinode, deleteLinode } = require('@linode/api-v4');
 const axios = require('axios');
 const util = require('util');
 const sleep = util.promisify(setTimeout);
@@ -8,9 +8,6 @@ const sleep = util.promisify(setTimeout);
 // Set the Linode API token
 const linodeToken = core.getInput('linode_token');
 setToken(linodeToken);
-
-// Create a Linode client
-const client = new LinodeClient(linodeToken);
 
 async function waitForSSH(ip, rootPassword, retries = 10, delay = 30000) {
   for (let i = 0; i < retries; i++) {
@@ -122,7 +119,7 @@ async function run() {
         await deleteLinode(machineId);
         core.info(`Linode machine ${machineId} destroyed successfully.`);
       } else if (searchPhrase) {
-        const instances = await client.linodeInstances.list();
+        const instances = await getLinodes();
         const matchingInstances = instances.data.filter(instance =>
           instance.label.includes(searchPhrase) ||
           instance.tags.includes(searchPhrase)
