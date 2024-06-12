@@ -22,6 +22,32 @@ async function waitForSSH(ip, rootPassword, retries = 10, delay = 30000) {
   throw new Error(`Unable to connect to ${ip} after ${retries} attempts.`);
 }
 
+async function unregisterRunner(repoOwner, repoName, githubToken, runnerLabel) {
+  const runners = await axios.get(
+    `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners`,
+    {
+      headers: {
+        Authorization: `Bearer ${githubToken}`,
+        Accept: 'application/vnd.github.v3+json'
+      }
+    }
+  );
+
+  const runner = runners.data.runners.find(r => r.labels.some(l => l.name === runnerLabel));
+
+  if (runner) {
+    await axios.delete(
+      `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/${runner.id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: 'application/vnd.github.v3+json'
+        }
+      }
+    );
+  }
+}
+
 async function run() {
   let linodeId = null;
   try {
@@ -72,16 +98,21 @@ async function run() {
         curl -o actions-runner-linux-x64-2.284.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.284.0/actions-runner-linux-x64-2.284.0.tar.gz
         tar xzf ./actions-runner-linux-x64-2.284.0.tar.gz
         ./config.sh --url https://github.com/${repoOwner}/${repoName} --token ${registrationToken} --labels ${baseLabel}
-        ./svc.sh install
-        ./svc.sh start
+        ./run.sh &
       `;
 
-      execSync(`sshpass -p '${rootPassword}' ssh -o StrictHostKeyChecking=no root@${ipv4} '${runnerScript}'`);
+      try {
+        execSync(`sshpass -p '${rootPassword}' ssh -o StrictHostKeyChecking=no root@${ipv4} '${runnerScript}'`, { stdio: 'inherit' });
+      } catch (error) {
+        console.error(`Runner setup failed: ${error.message}`);
+        throw error;
+      }
 
       core.setOutput('runner_label', baseLabel);
 
     } else if (action === 'destroy') {
       if (machineId) {
+        await unregisterRunner(repoOwner, repoName, githubToken, baseLabel);
         await deleteLinode(machineId);
         core.info(`Linode machine ${machineId} destroyed successfully.`);
       } else if (searchPhrase) {
@@ -93,6 +124,7 @@ async function run() {
 
         if (matchingInstances.length === 1) {
           const foundMachineId = matchingInstances[0].id;
+          await unregisterRunner(repoOwner, repoName, githubToken, baseLabel);
           await deleteLinode(foundMachineId);
           core.info(`Linode machine ${foundMachineId} destroyed successfully.`);
         } else if (matchingInstances.length === 0) {
@@ -110,6 +142,7 @@ async function run() {
     core.setFailed(error.message);
     if (linodeId) {
       try {
+        await unregisterRunner(repoOwner, repoName, githubToken, baseLabel);
         await deleteLinode(linodeId);
         core.info(`Linode machine ${linodeId} destroyed due to error.`);
       } catch (cleanupError) {
