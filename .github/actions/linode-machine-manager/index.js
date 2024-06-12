@@ -70,6 +70,7 @@ async function run() {
         type: machineType,
         image: image,
         root_pass: rootPassword,
+        label: baseLabel,
         tags: tags
       });
 
