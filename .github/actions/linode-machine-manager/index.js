@@ -98,8 +98,8 @@ async function run() {
         apt-get update
         apt-get install -y libssl-dev
         mkdir actions-runner && cd actions-runner
-        curl -o actions-runner-linux-x64-2.284.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.284.0/actions-runner-linux-x64-2.284.0.tar.gz
-        tar xzf ./actions-runner-linux-x64-2.284.0.tar.gz
+        curl -o actions-runner-linux-x64-2.317.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.317.0/actions-runner-linux-x64-2.317.0.tar.gz
+        tar xzf ./actions-runner-linux-x64-2.317.0.tar.gz
         ./config.sh --url https://github.com/${repoOwner}/${repoName} --token ${registrationToken} --labels ${baseLabel}
         ./run.sh &
       `;
