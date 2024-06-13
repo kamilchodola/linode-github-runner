@@ -36,7 +36,7 @@ async function unregisterRunner(repoOwner, repoName, githubToken, runnerLabel) {
 
     const runner = runnersResponse.data.runners.find(r => r.labels.some(l => l.name === runnerLabel));
     if (runner) {
-      await axios.delete(
+      const unregisterResponse = await axios.delete(
         `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/${runner.id}`,
         {
           headers: {
@@ -45,12 +45,20 @@ async function unregisterRunner(repoOwner, repoName, githubToken, runnerLabel) {
           }
         }
       );
-      console.log(`Runner with label ${runnerLabel} unregistered successfully.`);
+      if (unregisterResponse.status === 204) {
+        console.log(`Runner with label ${runnerLabel} unregistered successfully.`);
+      } else {
+        console.log(`Failed to unregister runner: ${unregisterResponse.status} - ${unregisterResponse.statusText}`);
+      }
     } else {
       console.log(`Runner with label ${runnerLabel} not found.`);
     }
   } catch (error) {
-    console.error(`Failed to unregister runner: ${error.message}`);
+    if (error.response && error.response.status === 422) {
+      console.error(`Failed to unregister runner: ${error.response.status} - ${error.response.statusText}`);
+    } else {
+      console.error(`Failed to unregister runner: ${error.message}`);
+    }
     throw error;
   }
 }
@@ -130,6 +138,7 @@ async function run() {
         const instances = await getLinodes();
         const matchingInstances = instances.data.filter(instance =>
           instance.label.includes(searchPhrase) ||
+          instance.label === searchPhrase ||
           instance.tags.includes(searchPhrase)
         );
 
