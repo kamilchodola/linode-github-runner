@@ -75,9 +75,8 @@ async function run() {
     const machineType = core.getInput('machine_type');
     const image = core.getInput('image');
     const tags = core.getInput('tags') ? core.getInput('tags').split(',').map(tag => tag.trim()) : [];
-
-    const repoFullName = process.env.GITHUB_REPOSITORY;
-    const [repoOwner, repoName] = repoFullName.split('/');
+    const repoOwner = core.getInput('organization');
+    const repoName = core.getInput('repo_name');
 
     if (action === 'create') {
       const linode = await createLinode({
