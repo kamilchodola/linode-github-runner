@@ -31,6 +31,12 @@ inputs:
   tags:
     description: 'Comma-separated list of tags for the Linode instance'
     required: false
+  organization:
+    description: 'Organization name'
+    required: true
+  repo_name: 
+    description: 'Repository name'
+    required: true
 outputs:
   runner_label:
     description: 'Final label of the self-hosted runner'
