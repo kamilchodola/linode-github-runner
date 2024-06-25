@@ -5,15 +5,14 @@ const axios = require('axios');
 const util = require('util');
 const sleep = util.promisify(setTimeout);
 
-// Set the Linode API token
 const linodeToken = core.getInput('linode_token');
 setToken(linodeToken);
 
-async function waitForSSH(ip, rootPassword, retries = 10, delay = 30000) {
+async function waitForSSH(ip, rootPassword, retries = 10, delay = 30000, timeout = 30) {
   for (let i = 0; i < retries; i++) {
     try {
       core.info(`Attempting SSH connection to ${ip}, attempt ${i + 1} of ${retries}`);
-      execSync(`sshpass -p '${rootPassword}' ssh -o StrictHostKeyChecking=no root@${ip} 'echo SSH is ready'`, { stdio: 'inherit' });
+      execSync(`sshpass -p '${rootPassword}' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=${timeout} root@${ip} 'echo SSH is ready'`, { stdio: 'inherit' });
       return true;
     } catch (error) {
       core.info(`SSH not ready yet. Retrying in ${delay / 1000} seconds...`);
