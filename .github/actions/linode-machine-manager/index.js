@@ -126,6 +126,7 @@ async function run() {
       await waitForSSH(ipv4, rootPassword);
 
       core.info('Requesting GitHub registration token...');
+      core.info(`GitHub registration token request sent to: https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`);
       const registrationTokenResponse = await axios.post(
         `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`,
         {},
@@ -137,8 +138,6 @@ async function run() {
         }
       );
 
-      core.info(`GitHub registration token request sent to: https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`);
-      core.info(`Registration token response data: ${JSON.stringify(registrationTokenResponse.data, null, 2)}`);
 
       const registrationToken = registrationTokenResponse.data.token;
       core.info('GitHub registration token received.');
