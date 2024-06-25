@@ -36,6 +36,8 @@ async function unregisterRunner(repoOwner, repoName, githubToken, runnerLabel) {
       }
     );
 
+    core.info(`Runners response data: ${JSON.stringify(runnersResponse.data, null, 2)}`);
+
     const runner = runnersResponse.data.runners.find(r => r.labels.some(l => l.name === runnerLabel));
     if (runner) {
       core.info(`Found runner with label ${runnerLabel}, unregistering...`);
@@ -48,6 +50,7 @@ async function unregisterRunner(repoOwner, repoName, githubToken, runnerLabel) {
           }
         }
       );
+      core.info(`Unregister request sent to: https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/${runner.id}`);
       if (unregisterResponse.status === 204) {
         core.info(`Runner with label ${runnerLabel} unregistered successfully.`);
       } else {
@@ -62,6 +65,16 @@ async function unregisterRunner(repoOwner, repoName, githubToken, runnerLabel) {
     } else {
       core.error(`Failed to unregister runner: ${error.message}`);
     }
+    throw error;
+  }
+}
+
+async function deleteLinodeInstance(linodeId) {
+  try {
+    await deleteLinode(linodeId);
+    core.info(`Linode machine ${linodeId} destroyed successfully.`);
+  } catch (error) {
+    core.error(`Failed to destroy Linode machine ${linodeId}: ${error.message}`);
     throw error;
   }
 }
@@ -125,6 +138,9 @@ async function run() {
         }
       );
 
+      core.info(`GitHub registration token request sent to: https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`);
+      core.info(`Registration token response data: ${JSON.stringify(registrationTokenResponse.data, null, 2)}`);
+
       const registrationToken = registrationTokenResponse.data.token;
       core.info('GitHub registration token received.');
 
@@ -151,33 +167,66 @@ async function run() {
       core.setOutput('runner_label', baseLabel);
 
     } else if (action === 'destroy') {
-      if (machineId) {
-        core.info(`Destroying Linode instance with ID ${machineId}...`);
-        await unregisterRunner(repoOwner, repoName, githubToken, baseLabel);
-        await deleteLinode(machineId);
-        core.info(`Linode machine ${machineId} destroyed successfully.`);
-      } else if (searchPhrase) {
-        core.info(`Searching for Linode instances matching phrase "${searchPhrase}"...`);
-        const instances = await getLinodes();
-        const matchingInstances = instances.data.filter(instance =>
-          instance.label.includes(searchPhrase) ||
-          instance.label === searchPhrase ||
-          instance.tags.includes(searchPhrase)
-        );
-
-        if (matchingInstances.length === 1) {
-          const foundMachineId = matchingInstances[0].id;
-          core.info(`Found single matching instance with ID ${foundMachineId}, destroying...`);
+      let unregisterError = null;
+      try {
+        if (machineId) {
+          core.info(`Unregistering runner for Linode instance with ID ${machineId}...`);
           await unregisterRunner(repoOwner, repoName, githubToken, baseLabel);
-          await deleteLinode(foundMachineId);
-          core.info(`Linode machine ${foundMachineId} destroyed successfully.`);
-        } else if (matchingInstances.length === 0) {
-          throw new Error(`No Linode instances found matching the search phrase: ${searchPhrase}`);
+        } else if (searchPhrase) {
+          core.info(`Searching for Linode instances matching phrase "${searchPhrase}"...`);
+          const instances = await getLinodes();
+          core.info(`Found instances: ${JSON.stringify(instances.data, null, 2)}`);
+          const matchingInstances = instances.data.filter(instance =>
+            instance.label.includes(searchPhrase) ||
+            instance.label === searchPhrase ||
+            instance.tags.includes(searchPhrase)
+          );
+
+          core.info(`Matching instances: ${JSON.stringify(matchingInstances, null, 2)}`);
+
+          if (matchingInstances.length === 1) {
+            const foundMachineId = matchingInstances[0].id;
+            core.info(`Found single matching instance with ID ${foundMachineId}, unregistering runner...`);
+            await unregisterRunner(repoOwner, repoName, githubToken, baseLabel);
+          } else if (matchingInstances.length === 0) {
+            throw new Error(`No Linode instances found matching the search phrase: ${searchPhrase}`);
+          } else {
+            throw new Error(`Multiple Linode instances found matching the search phrase: ${searchPhrase}`);
+          }
         } else {
-          throw new Error(`Multiple Linode instances found matching the search phrase: ${searchPhrase}`);
+          throw new Error('Either machine_id or search_phrase must be provided for destruction');
         }
-      } else {
-        throw new Error('Either machine_id or search_phrase must be provided for destruction');
+      } catch (error) {
+        unregisterError = error;
+        core.error(`Failed to unregister runner: ${error.message}`);
+      }
+
+      try {
+        if (machineId) {
+          await deleteLinodeInstance(machineId);
+        } else if (searchPhrase) {
+          const instances = await getLinodes();
+          const matchingInstances = instances.data.filter(instance =>
+            instance.label.includes(searchPhrase) ||
+            instance.label === searchPhrase ||
+            instance.tags.includes(searchPhrase)
+          );
+          if (matchingInstances.length === 1) {
+            const foundMachineId = matchingInstances[0].id;
+            await deleteLinodeInstance(foundMachineId);
+          }
+        }
+      } catch (deleteError) {
+        core.error(`Failed to destroy Linode machine: ${deleteError.message}`);
+        if (unregisterError) {
+          throw new Error(`Failed to unregister runner and destroy Linode. Unregister error: ${unregisterError.message}, Destroy error: ${deleteError.message}`);
+        } else {
+          throw new Error(`Failed to destroy Linode machine. Destroy error: ${deleteError.message}`);
+        }
+      }
+
+      if (unregisterError) {
+        throw unregisterError;
       }
     } else {
       throw new Error('Invalid action. Use "create" or "destroy".');
@@ -188,7 +237,7 @@ async function run() {
       try {
         core.info(`Cleaning up Linode instance with ID ${linodeId} due to error...`);
         await unregisterRunner(repoOwner, repoName, githubToken, baseLabel);
-        await deleteLinode(linodeId);
+        await deleteLinodeInstance(linodeId);
         core.info(`Linode machine ${linodeId} destroyed during cleanup.`);
       } catch (cleanupError) {
         core.error(`Failed to destroy Linode machine ${linodeId} during cleanup: ${cleanupError.message}`);
