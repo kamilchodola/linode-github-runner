@@ -80,18 +80,19 @@ async function deleteLinodeInstance(linodeId) {
 
 async function run() {
   let linodeId = null;
+  const githubToken = core.getInput('github_token');
+  const action = core.getInput('action');
+  const machineId = core.getInput('machine_id');
+  const searchPhrase = core.getInput('search_phrase');
+  const baseLabel = core.getInput('runner_label') || 'self-hosted';
+  const rootPassword = core.getInput('root_password');
+  const machineType = core.getInput('machine_type');
+  const image = core.getInput('image');
+  const tags = core.getInput('tags') ? core.getInput('tags').split(',').map(tag => tag.trim()) : [];
+  const repoOwner = core.getInput('organization');
+  const repoName = core.getInput('repo_name');
+  
   try {
-    const githubToken = core.getInput('github_token');
-    const action = core.getInput('action');
-    const machineId = core.getInput('machine_id');
-    const searchPhrase = core.getInput('search_phrase');
-    const baseLabel = core.getInput('runner_label') || 'self-hosted';
-    const rootPassword = core.getInput('root_password');
-    const machineType = core.getInput('machine_type');
-    const image = core.getInput('image');
-    const tags = core.getInput('tags') ? core.getInput('tags').split(',').map(tag => tag.trim()) : [];
-    const repoOwner = core.getInput('organization');
-    const repoName = core.getInput('repo_name');
 
     core.info(`Action: ${action}`);
     core.info(`Organization: ${repoOwner}`);
