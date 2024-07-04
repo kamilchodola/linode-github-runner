@@ -126,10 +126,12 @@ async function run() {
       // Wait for the Linode instance to be ready for SSH connections
       await waitForSSH(ipv4, rootPassword);
 
+      const registrationTokenUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`;
+
       core.info('Requesting GitHub registration token...');
-      core.info(`GitHub registration token request sent to: https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`);
+      core.info(`GitHub registration token request sent to: ${registrationTokenUrl}`);
       const registrationTokenResponse = await axios.post(
-        `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`,
+        registrationTokenUrl,
         {},
         {
           headers: {
@@ -231,7 +233,11 @@ async function run() {
       throw new Error('Invalid action. Use "create" or "destroy".');
     }
   } catch (error) {
-    core.setFailed(error.message);
+    if (error.response) {
+      core.setFailed(`${error.response.status} - ${error.response.data}`);
+    } else {
+      core.setFailed(error.message);
+    }
     if (linodeId) {
       try {
         core.info(`Cleaning up Linode instance with ID ${linodeId} due to error...`);
