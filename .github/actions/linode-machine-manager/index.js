@@ -192,7 +192,7 @@ async function run() {
             instance.tags.includes(searchPhrase)
           );
 
-          core.info(`Matching instances: ${JSON.stringify(matchingInstances, null, 2)}`);
+          // core.info(`Matching instances: ${JSON.stringify(matchingInstances, null, 2)}`);
 
           if (matchingInstances.length === 1) {
             const foundMachineId = matchingInstances[0].id;
