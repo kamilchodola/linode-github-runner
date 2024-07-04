@@ -130,16 +130,25 @@ async function run() {
 
       core.info('Requesting GitHub registration token...');
       core.info(`GitHub registration token request sent to: ${registrationTokenUrl}`);
-      const registrationTokenResponse = await axios.post(
-        registrationTokenUrl,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${githubToken}`,
-            Accept: 'application/vnd.github.v3+json'
+      let registrationTokenResponse;
+      try {
+        registrationTokenResponse = await axios.post(
+          registrationTokenUrl,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${githubToken}`,
+              Accept: 'application/vnd.github.v3+json'
+            }
           }
+        );
+      } catch (error) {
+        core.error(`Failed to get GitHub registration token: ${error.message}`);
+        if (error.response) {
+          core.error(`Response status: ${error.response.status} - ${error.response.data}`);
         }
-      );
+        throw error;
+      }
 
 
       const registrationToken = registrationTokenResponse.data.token;
@@ -233,11 +242,7 @@ async function run() {
       throw new Error('Invalid action. Use "create" or "destroy".');
     }
   } catch (error) {
-    if (error.response) {
-      core.setFailed(`${error.response.status} - ${error.response.data}`);
-    } else {
-      core.setFailed(error.message);
-    }
+    core.setFailed(error.message);
     if (linodeId) {
       try {
         core.info(`Cleaning up Linode instance with ID ${linodeId} due to error...`);
