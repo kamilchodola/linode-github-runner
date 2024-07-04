@@ -115,7 +115,6 @@ async function run() {
       try {
         registrationTokenResponse = await axios.post(
           registrationTokenUrl,
-          {},
           {
             headers: {
               Authorization: `Bearer ${githubToken}`,
