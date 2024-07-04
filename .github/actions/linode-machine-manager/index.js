@@ -176,7 +176,7 @@ async function run() {
         } else if (searchPhrase) {
           core.info(`Searching for Linode instances matching phrase "${searchPhrase}"...`);
           const instances = await getLinodes();
-          core.info(`Found instances: ${JSON.stringify(instances.data, null, 2)}`);
+          // core.info(`Found instances: ${JSON.stringify(instances.data, null, 2)}`);
           const matchingInstances = instances.data.filter(instance =>
             instance.label.includes(searchPhrase) ||
             instance.label === searchPhrase ||
