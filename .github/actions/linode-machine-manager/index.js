@@ -107,6 +107,34 @@ async function run() {
     }
 
     if (action === 'create') {
+      const registrationTokenUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`;
+
+      core.info('Requesting GitHub registration token...');
+      core.info(`GitHub registration token request sent to: ${registrationTokenUrl}`);
+      let registrationTokenResponse;
+      try {
+        registrationTokenResponse = await axios.post(
+          registrationTokenUrl,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${githubToken}`,
+              Accept: 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28'
+            }
+          }
+        );
+      } catch (error) {
+        core.error(`Failed to get GitHub registration token: ${error.message}`);
+        if (error.response) {
+          core.error(`Response status: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+        }
+        throw error;
+      }
+
+      const registrationToken = registrationTokenResponse.data.token;
+      core.info('GitHub registration token received.');
+
       core.info('Creating new Linode instance...');
       const linode = await createLinode({
         region: 'us-east',
@@ -125,34 +153,6 @@ async function run() {
 
       // Wait for the Linode instance to be ready for SSH connections
       await waitForSSH(ipv4, rootPassword);
-
-      const registrationTokenUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`;
-
-      core.info('Requesting GitHub registration token...');
-      core.info(`GitHub registration token request sent to: ${registrationTokenUrl}`);
-      let registrationTokenResponse;
-      try {
-        registrationTokenResponse = await axios.post(
-          registrationTokenUrl,
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${githubToken}`,
-              Accept: 'application/vnd.github.v3+json'
-            }
-          }
-        );
-      } catch (error) {
-        core.error(`Failed to get GitHub registration token: ${error.message}`);
-        if (error.response) {
-          core.error(`Response status: ${error.response.status} - ${error.response.data}`);
-        }
-        throw error;
-      }
-
-
-      const registrationToken = registrationTokenResponse.data.token;
-      core.info('GitHub registration token received.');
 
       const runnerScript = `
         export RUNNER_ALLOW_RUNASROOT="1"
