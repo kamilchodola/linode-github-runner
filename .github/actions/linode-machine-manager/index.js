@@ -123,6 +123,7 @@ async function run() {
       }
 
       const registrationToken = registrationTokenResponse.data.token;
+      core.setSecret(registrationToken);
       core.info('GitHub registration token received.');
 
       core.info('Creating new Linode instance...');
