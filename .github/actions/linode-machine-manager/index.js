@@ -93,15 +93,6 @@ async function run() {
   const repoName = core.getInput('repo_name');
   
   try {
-
-    core.info(`Action: ${action}`);
-    core.info(`Organization: ${repoOwner}`);
-    core.info(`Repository: ${repoName}`);
-    core.info(`Machine Type: ${machineType}`);
-    core.info(`Image: ${image}`);
-    core.info(`Tags: ${tags}`);
-    core.info(`Runner Label: ${baseLabel}`);
-
     if (!repoOwner || !repoName) {
       throw new Error('Both organization and repo_name inputs are required.');
     }
@@ -145,10 +136,12 @@ async function run() {
       });
 
       linodeId = linode.id;
-      const { ipv4 } = linode;
+      const { ipv4 } = linode; 
+      core.setSecret(linodeId);
       core.setOutput('machine_id', linodeId);
+      core.setSecret(ipv4);
       core.setOutput('machine_ip', ipv4);
-      core.info(`Linode instance created with ID ${linodeId} and IP ${ipv4}`);
+      // core.info(`Linode instance created with ID ${linodeId} and IP ${ipv4}`);
 
       // Wait for the Linode instance to be ready for SSH connections
       await waitForSSH(ipv4, rootPassword);
@@ -194,8 +187,8 @@ async function run() {
           // core.info(`Matching instances: ${JSON.stringify(matchingInstances, null, 2)}`);
 
           if (matchingInstances.length === 1) {
-            const foundMachineId = matchingInstances[0].id;
-            core.info(`Found single matching instance with ID ${foundMachineId}, unregistering runner...`);
+            // const foundMachineId = matchingInstances[0].id;
+            // core.info(`Found single matching instance with ID ${foundMachineId}, unregistering runner...`);
             await unregisterRunner(repoOwner, repoName, githubToken, baseLabel);
           } else if (matchingInstances.length === 0) {
             throw new Error(`No Linode instances found matching the search phrase: ${searchPhrase}`);
