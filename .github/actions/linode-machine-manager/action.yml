@@ -1,45 +1,49 @@
-name: 'Linode Machine Manager'
-description: 'Create and manage Linode machines and GitHub self-hosted runners'
+name: "Linode Machine Manager"
+description: "Create and manage Linode machines and GitHub self-hosted runners"
 inputs:
   linode_token:
-    description: 'Linode API token'
+    description: "Linode API token"
     required: true
   github_token:
-    description: 'GitHub Token'
+    description: "GitHub Token"
     required: true
   action:
     description: '"create" to create a new machine, "destroy" to remove it'
     required: true
   machine_id:
-    description: 'ID of the machine to destroy'
+    description: "ID of the machine to destroy"
     required: false
   search_phrase:
-    description: 'Search phrase to find the machine to destroy'
+    description: "Search phrase to find the machine to destroy"
     required: false
   runner_label:
-    description: 'Base label for the self-hosted runner'
+    description: "Base label for the self-hosted runner"
     required: false
   root_password:
-    description: 'Root password for the new Linode machine'
+    description: "Root password for the new Linode machine"
     required: true
   machine_type:
-    description: 'Type of Linode machine to create'
+    description: "Type of Linode machine to create"
     required: true
   image:
-    description: 'Image to use for the Linode machine'
+    description: "Image to use for the Linode machine"
     required: true
   tags:
-    description: 'Comma-separated list of tags for the Linode instance'
+    description: "Comma-separated list of tags for the Linode instance"
     required: false
   organization:
-    description: 'Organization name'
+    description: "Organization name"
     required: true
-  repo_name: 
-    description: 'Repository name'
+  repo_name:
+    description: "Repository name"
     required: true
 outputs:
   runner_label:
-    description: 'Final label of the self-hosted runner'
+    description: "Final label of the self-hosted runner"
+  machine_id:
+    description: "ID of the Linode machine"
+  machine_ip:
+    description: "IP address of the Linode machine"
 runs:
-  using: 'node20'
-  main: 'index.js'
+  using: "node20"
+  main: "index.js"

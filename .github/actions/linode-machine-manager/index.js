@@ -93,20 +93,39 @@ async function run() {
   const repoName = core.getInput('repo_name');
   
   try {
-
-    core.info(`Action: ${action}`);
-    core.info(`Organization: ${repoOwner}`);
-    core.info(`Repository: ${repoName}`);
-    core.info(`Machine Type: ${machineType}`);
-    core.info(`Image: ${image}`);
-    core.info(`Tags: ${tags}`);
-    core.info(`Runner Label: ${baseLabel}`);
-
     if (!repoOwner || !repoName) {
       throw new Error('Both organization and repo_name inputs are required.');
     }
 
     if (action === 'create') {
+      const registrationTokenUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`;
+
+      core.info('Requesting GitHub registration token...');
+      core.info(`GitHub registration token request sent to: ${registrationTokenUrl}`);
+      let registrationTokenResponse;
+      try {
+        registrationTokenResponse = await axios.post(
+          registrationTokenUrl,
+          {
+            headers: {
+              Authorization: `Bearer ${githubToken}`,
+              Accept: 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28'
+            }
+          }
+        );
+      } catch (error) {
+        core.error(`Failed to get GitHub registration token: ${error.message}`);
+        if (error.response) {
+          core.error(`Response status: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+        }
+        throw error;
+      }
+
+      const registrationToken = registrationTokenResponse.data.token;
+      core.setSecret(registrationToken);
+      core.info('GitHub registration token received.');
+
       core.info('Creating new Linode instance...');
       const linode = await createLinode({
         region: 'us-east',
@@ -118,30 +137,15 @@ async function run() {
       });
 
       linodeId = linode.id;
-      const { ipv4 } = linode;
+      const { ipv4 } = linode; 
+      core.setSecret(linodeId);
       core.setOutput('machine_id', linodeId);
+      core.setSecret(ipv4);
       core.setOutput('machine_ip', ipv4);
-      core.info(`Linode instance created with ID ${linodeId} and IP ${ipv4}`);
+      // core.info(`Linode instance created with ID ${linodeId} and IP ${ipv4}`);
 
       // Wait for the Linode instance to be ready for SSH connections
       await waitForSSH(ipv4, rootPassword);
-
-      core.info('Requesting GitHub registration token...');
-      core.info(`GitHub registration token request sent to: https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`);
-      const registrationTokenResponse = await axios.post(
-        `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${githubToken}`,
-            Accept: 'application/vnd.github.v3+json'
-          }
-        }
-      );
-
-
-      const registrationToken = registrationTokenResponse.data.token;
-      core.info('GitHub registration token received.');
 
       const runnerScript = `
         export RUNNER_ALLOW_RUNASROOT="1"
@@ -174,18 +178,18 @@ async function run() {
         } else if (searchPhrase) {
           core.info(`Searching for Linode instances matching phrase "${searchPhrase}"...`);
           const instances = await getLinodes();
-          core.info(`Found instances: ${JSON.stringify(instances.data, null, 2)}`);
+          // core.info(`Found instances: ${JSON.stringify(instances.data, null, 2)}`);
           const matchingInstances = instances.data.filter(instance =>
             instance.label.includes(searchPhrase) ||
             instance.label === searchPhrase ||
             instance.tags.includes(searchPhrase)
           );
 
-          core.info(`Matching instances: ${JSON.stringify(matchingInstances, null, 2)}`);
+          // core.info(`Matching instances: ${JSON.stringify(matchingInstances, null, 2)}`);
 
           if (matchingInstances.length === 1) {
-            const foundMachineId = matchingInstances[0].id;
-            core.info(`Found single matching instance with ID ${foundMachineId}, unregistering runner...`);
+            // const foundMachineId = matchingInstances[0].id;
+            // core.info(`Found single matching instance with ID ${foundMachineId}, unregistering runner...`);
             await unregisterRunner(repoOwner, repoName, githubToken, baseLabel);
           } else if (matchingInstances.length === 0) {
             throw new Error(`No Linode instances found matching the search phrase: ${searchPhrase}`);
