@@ -103,6 +103,7 @@ async function run() {
       core.info('Requesting GitHub registration token...');
       core.info(`GitHub registration token request sent to: ${registrationTokenUrl}`);
       let registrationTokenResponse;
+      let token;
       const curlCommand = `curl -X POST ${registrationTokenUrl} \
         -H "Authorization: Bearer ${githubToken}" \
         -H "Accept: application/vnd.github+json" \
@@ -111,7 +112,7 @@ async function run() {
       try {
         const result = execSync(curlCommand, { encoding: 'utf-8' });
         const registrationTokenResponse = JSON.parse(result);
-        const token = registrationTokenResponse.token;
+        token = registrationTokenResponse.token;
 
         if (token) {
           console.info('Token correctly received.')
@@ -130,8 +131,7 @@ async function run() {
         throw error;
       }
       
-      const registrationToken = registrationTokenResponse.data.token;
-      core.setSecret(registrationToken);
+      core.setSecret(token);
       core.info('GitHub registration token received.');
 
       core.info('Creating new Linode instance...');
@@ -162,7 +162,7 @@ async function run() {
         mkdir actions-runner && cd actions-runner
         curl -o actions-runner-linux-x64-2.317.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.317.0/actions-runner-linux-x64-2.317.0.tar.gz
         tar xzf ./actions-runner-linux-x64-2.317.0.tar.gz
-        ./config.sh --url https://github.com/${repoOwner}/${repoName} --token ${registrationToken} --labels ${baseLabel} --name ${baseLabel}
+        ./config.sh --url https://github.com/${repoOwner}/${repoName} --token ${token} --labels ${baseLabel} --name ${baseLabel}
         nohup ./run.sh > runner.log 2>&1 &
       `;
 
