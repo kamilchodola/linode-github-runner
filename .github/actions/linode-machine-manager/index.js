@@ -103,22 +103,19 @@ async function run() {
       core.info('Requesting GitHub registration token...');
       core.info(`GitHub registration token request sent to: ${registrationTokenUrl}`);
       let registrationTokenResponse;
-      curl_command = [
-        'curl',
-        '-X', 'POST',
-        registration_token_url,
-        '-H', f'Authorization: Bearer {github_token}',
-        '-H', 'Accept: application/vnd.github+json',
-        '-H', 'X-GitHub-Api-Version: 2022-11-28'
-      ]
+      const curlCommand = `curl -X POST ${registrationTokenUrl} \
+        -H "Authorization: Bearer ${githubToken}" \
+        -H "Accept: application/vnd.github+json" \
+        -H "X-GitHub-Api-Version: 2022-11-28"`;
       
       try {
-        result = subprocess.run(curl_command, capture_output=True, text=True, check=True)
-        response_json = json.loads(result.stdout)
-        token = response_json.get('token')
+        const result = execSync(curlCommand, { encoding: 'utf-8' });
+        const registrationTokenResponse = JSON.parse(result);
+        const token = registrationTokenResponse.token;
 
-        if token:
+        if (token) {
           print("Token correctly received")
+        }
       } 
       except requests.exceptions.RequestException as error:
         print(f"Failed to get GitHub registration token: {error}")
