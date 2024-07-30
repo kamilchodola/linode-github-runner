@@ -116,7 +116,6 @@ async function run() {
         if (token) {
           print("Token correctly received")
         }
-      } 
       } catch (error) {
         console.error(`Failed to get GitHub registration token: ${error.message}`);
         if (error.stderr) {
