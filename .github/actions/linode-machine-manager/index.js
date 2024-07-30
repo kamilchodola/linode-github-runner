@@ -103,25 +103,32 @@ async function run() {
       core.info('Requesting GitHub registration token...');
       core.info(`GitHub registration token request sent to: ${registrationTokenUrl}`);
       let registrationTokenResponse;
+      curl_command = [
+        'curl',
+        '-X', 'POST',
+        registration_token_url,
+        '-H', f'Authorization: Bearer {github_token}',
+        '-H', 'Accept: application/vnd.github+json',
+        '-H', 'X-GitHub-Api-Version: 2022-11-28'
+      ]
       try {
-        registrationTokenResponse = await axios.post(
-          registrationTokenUrl,
-          {
-            headers: {
-              'Authorization': `Bearer ${githubToken}`,
-              'Accept': 'application/vnd.github+json',
-              'X-GitHub-Api-Version': '2022-11-28'
-            }
-          }
-        );
-      } catch (error) {
-        core.error(`Failed to get GitHub registration token: ${error.message}`);
-        if (error.response) {
-          core.error(`Response status: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
-        }
-        throw error;
-      }
+        result = subprocess.run(curl_command, capture_output=True, text=True, check=True)
+        response_json = json.loads(result.stdout)
+        token = response_json.get('token')
 
+        if token:
+          print("Token correctly received")
+      } 
+      except requests.exceptions.RequestException as error:
+        print(f"Failed to get GitHub registration token: {error}")
+        if error.stderr:
+          try:
+            response_data = json.loads(error.stderr)
+          except json.JSONDecodeError:
+            response_data = error.stderr
+          print(f"Response status: {error.returncode} - {response_data}")
+        raise
+      
       const registrationToken = registrationTokenResponse.data.token;
       core.setSecret(registrationToken);
       core.info('GitHub registration token received.');
