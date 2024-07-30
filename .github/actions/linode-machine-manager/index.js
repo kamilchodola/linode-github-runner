@@ -108,9 +108,9 @@ async function run() {
           registrationTokenUrl,
           {
             headers: {
-              Authorization: `Bearer ${githubToken}`,
-              Accept: 'application/vnd.github+json',
-              X-GitHub-Api-Version: '2022-11-28'
+              'Authorization': `Bearer ${githubToken}`,
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28'
             }
           }
         );
