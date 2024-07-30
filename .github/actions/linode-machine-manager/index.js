@@ -117,15 +117,19 @@ async function run() {
           print("Token correctly received")
         }
       } 
-      except requests.exceptions.RequestException as error:
-        print(f"Failed to get GitHub registration token: {error}")
-        if error.stderr:
-          try:
-            response_data = json.loads(error.stderr)
-          except json.JSONDecodeError:
-            response_data = error.stderr
-          print(f"Response status: {error.returncode} - {response_data}")
-        raise
+      } catch (error) {
+        console.error(`Failed to get GitHub registration token: ${error.message}`);
+        if (error.stderr) {
+          let responseData;
+          try {
+            responseData = JSON.parse(error.stderr);
+          } catch (jsonError) {
+           responseData = error.stderr;
+          }
+          console.error(`Response status: ${error.status} - ${JSON.stringify(responseData)}`);
+        }
+        throw error;
+      }
       
       const registrationToken = registrationTokenResponse.data.token;
       core.setSecret(registrationToken);
