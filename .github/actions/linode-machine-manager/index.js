@@ -273,7 +273,7 @@ async function run() {
                 throw unregisterError;
             }
         } else {
-            throw new Error('Invalid action. Use "create" or "destroy".');
+            throw new Error('Invalid action. Use "create", "destroy", "destroy-machine", or "destroy-runner".');
         }
     } catch (error) {
         core.setFailed(error.message);
