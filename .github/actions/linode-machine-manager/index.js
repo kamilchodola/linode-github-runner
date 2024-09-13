@@ -146,9 +146,7 @@ async function run() {
             let token;
             try {
                 const registrationTokenResponse = await axios.post(
-                    registrationTokenUrl,
-                    {},
-                    {
+                    registrationTokenUrl, {}, {
                         headers: {
                             Authorization: `Bearer ${githubToken}`,
                             Accept: 'application/vnd.github.v3+json'
@@ -181,7 +179,9 @@ async function run() {
             });
 
             linodeId = linode.id;
-            const { ipv4 } = linode;
+            const {
+                ipv4
+            } = linode;
             core.setSecret(linodeId.toString());
             core.setOutput('machine_id', linodeId);
             core.setSecret(ipv4[0]);
@@ -217,10 +217,22 @@ nohup ./run.sh > runner.log 2>&1 &
 
             if (shouldCreateFirewall) {
                 // Build firewall rules to block specified ports
+                function isValidPort(port) {
+                    const portNumber = parseInt(port, 10);
+                    return Number.isInteger(portNumber) && portNumber >= 1 && portNumber <= 65535;
+                }
+
+                // Validate ports
+                const invalidPorts = blockedPorts.filter(port => !isValidPort(port));
+                if (invalidPorts.length > 0) {
+                    throw new Error(`Invalid ports specified: ${invalidPorts.join(', ')}`);
+                }
+
+                // Ensure ports are strings
                 const inboundRules = blockedPorts.map(port => ({
-                    action: 'DROP',   // Block traffic to specified ports
-                    protocol: 'TCP',  // Adjust protocol if necessary
-                    ports: port,
+                    action: 'DROP', // Block traffic to specified ports
+                    protocol: 'TCP', // Adjust protocol if necessary
+                    ports: port.toString(), // Ensure port is a string
                     addresses: {
                         ipv4: ['0.0.0.0/0'],
                         ipv6: ['::/0']
@@ -228,19 +240,10 @@ nohup ./run.sh > runner.log 2>&1 &
                 }));
 
                 const firewallRules = {
-                    inbound_policy: 'ACCEPT',   // Allow all inbound traffic by default
-                    outbound_policy: 'ACCEPT',  // Allow all outbound traffic
-                    inbound: inboundRules,      // Rules to block specified ports
-                    outbound: [
-                        {
-                            action: 'ACCEPT',
-                            protocol: 'ALL',
-                            addresses: {
-                                ipv4: ['0.0.0.0/0'],
-                                ipv6: ['::/0']
-                            }
-                        }
-                    ]
+                    inbound_policy: 'ACCEPT', // Allow all inbound traffic by default
+                    outbound_policy: 'ACCEPT', // Allow all outbound traffic
+                    inbound: inboundRules, // Rules to block specified ports
+                    outbound: []
                 };
 
                 const firewallLabel = `firewall-${linodeId}`;
@@ -253,6 +256,8 @@ nohup ./run.sh > runner.log 2>&1 &
                 };
 
                 core.info('Creating firewall to block specified ports...');
+                core.debug(`Firewall Request Body: ${JSON.stringify(firewallRequestBody, null, 2)}`);
+
                 try {
                     const firewallResponse = await axios.post('https://api.linode.com/v4/networking/firewalls', firewallRequestBody, {
                         headers: {
@@ -263,6 +268,9 @@ nohup ./run.sh > runner.log 2>&1 &
                     const firewall = firewallResponse.data;
                     core.info(`Firewall ${firewall.id} created and assigned to Linode instance.`);
                 } catch (error) {
+                    if (error.response && error.response.data) {
+                        core.error(`API Response: ${JSON.stringify(error.response.data, null, 2)}`);
+                    }
                     core.error(`Failed to create firewall: ${error.message}`);
                     throw error;
                 }
