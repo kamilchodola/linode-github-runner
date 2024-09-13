@@ -37,6 +37,8 @@ inputs:
   repo_name:
     description: "Repository name"
     required: true
+  blocked_ports:
+    description: "Ports to block on firewall"
 outputs:
   runner_label:
     description: "Final label of the self-hosted runner"
