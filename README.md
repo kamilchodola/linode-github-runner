@@ -19,6 +19,7 @@ This GitHub Action allows you to create and manage Linode machines and set up Gi
 | `tags`           | Comma-separated list of tags for the Linode instance.                                         | No       |         |
 | `organization`   | The GitHub organization name where the self-hosted runner will be registered.                 | Yes      |         |
 | `repo_name`      | The GitHub repository name where the self-hosted runner will be registered.                   | Yes      |         |
+| `blocked_ports`  | Ports to block on firewall.                                                                   | No       |         |
 
 ## Outputs
 
