@@ -73,12 +73,43 @@ async function unregisterRunner(repoOwner, repoName, githubToken, runnerLabel) {
     }
 }
 
+async function deleteFirewall(linodeId) {
+    const firewallLabel = `firewall-${linodeId}`;
+    try {
+        // List all firewalls
+        const firewallsResponse = await axios.get('https://api.linode.com/v4/networking/firewalls', {
+            headers: {
+                Authorization: `Bearer ${linodeToken}`
+            }
+        });
+
+        const firewalls = firewallsResponse.data.data;
+        const firewall = firewalls.find(fw => fw.label === firewallLabel);
+
+        if (firewall) {
+            // Delete the firewall
+            await axios.delete(`https://api.linode.com/v4/networking/firewalls/${firewall.id}`, {
+                headers: {
+                    Authorization: `Bearer ${linodeToken}`
+                }
+            });
+            core.info(`Firewall ${firewall.id} deleted successfully.`);
+        } else {
+            core.info(`Firewall with label ${firewallLabel} not found.`);
+        }
+    } catch (error) {
+        core.error(`Failed to delete firewall: ${error.message}`);
+        throw error;
+    }
+}
+
 async function deleteLinodeInstance(linodeId) {
     try {
+        await deleteFirewall(linodeId);
         await deleteLinode(linodeId);
-        core.info(`Linode machine ${linodeId} destroyed successfully.`);
+        core.info(`Linode machine ${linodeId} and associated firewall destroyed successfully.`);
     } catch (error) {
-        core.error(`Failed to destroy Linode machine ${linodeId}: ${error.message}`);
+        core.error(`Failed to destroy Linode machine ${linodeId} or associated firewall: ${error.message}`);
         throw error;
     }
 }
@@ -96,6 +127,10 @@ async function run() {
     const tags = core.getInput('tags') ? core.getInput('tags').split(',').map(tag => tag.trim()) : [];
     const repoOwner = core.getInput('organization');
     const repoName = core.getInput('repo_name');
+    const blockedPortsInput = core.getInput('blocked_ports');
+    const blockedPorts = blockedPortsInput ? blockedPortsInput.split(',').map(port => port.trim()) : [];
+
+    const shouldCreateFirewall = blockedPorts.length > 0;
 
     try {
         if (!repoOwner || !repoName) {
@@ -103,47 +138,39 @@ async function run() {
         }
 
         if (action === 'create') {
+            // Request GitHub registration token
             const registrationTokenUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners/registration-token`;
 
             core.info('Requesting GitHub registration token...');
             core.info(`GitHub registration token request sent to: ${registrationTokenUrl}`);
-            let registrationTokenResponse;
             let token;
-            const curlCommand = `curl -X POST ${registrationTokenUrl} \
-        -H "Authorization: Bearer ${githubToken}" \
-        -H "Accept: application/vnd.github+json" \
-        -H "X-GitHub-Api-Version: 2022-11-28"`;
-
             try {
-                const result = execSync(curlCommand, {
-                    encoding: 'utf-8'
-                });
-                const registrationTokenResponse = JSON.parse(result);
-                token = registrationTokenResponse.token;
-
+                const registrationTokenResponse = await axios.post(
+                    registrationTokenUrl, {}, {
+                        headers: {
+                            Authorization: `Bearer ${githubToken}`,
+                            Accept: 'application/vnd.github.v3+json'
+                        }
+                    }
+                );
+                token = registrationTokenResponse.data.token;
                 if (token) {
-                    console.info('Token correctly received.')
+                    core.info('GitHub registration token received.');
+                    core.setSecret(token);
+                } else {
+                    throw new Error('Failed to retrieve GitHub registration token.');
                 }
             } catch (error) {
-                console.error(`Failed to get GitHub registration token: ${error.message}`);
-                if (error.stderr) {
-                    let responseData;
-                    try {
-                        responseData = JSON.parse(error.stderr);
-                    } catch (jsonError) {
-                        responseData = error.stderr;
-                    }
-                    console.error(`Response status: ${error.status} - ${JSON.stringify(responseData)}`);
+                core.error(`Failed to get GitHub registration token: ${error.message}`);
+                if (error.response) {
+                    core.error(`Response status: ${error.response.status} - ${error.response.statusText}`);
                 }
                 throw error;
             }
 
-            core.setSecret(token);
-            core.info('GitHub registration token received.');
-
             core.info('Creating new Linode instance...');
             const linode = await createLinode({
-                region: 'us-east',
+                region: 'us-east', // Adjust region as needed
                 type: machineType,
                 image: image,
                 root_pass: rootPassword,
@@ -155,29 +182,29 @@ async function run() {
             const {
                 ipv4
             } = linode;
-            core.setSecret(linodeId);
+            core.setSecret(linodeId.toString());
             core.setOutput('machine_id', linodeId);
-            core.setSecret(ipv4);
-            core.setOutput('machine_ip', ipv4);
-            // core.info(`Linode instance created with ID ${linodeId} and IP ${ipv4}`);
+            core.setSecret(ipv4[0]);
+            core.setOutput('machine_ip', ipv4[0]);
+            core.info(`Linode instance created with ID ${linodeId} and IP ${ipv4[0]}`);
 
             // Wait for the Linode instance to be ready for SSH connections
-            await waitForSSH(ipv4, rootPassword);
+            await waitForSSH(ipv4[0], rootPassword);
 
             const runnerScript = `
-        export RUNNER_ALLOW_RUNASROOT="1"
-        apt-get update
-        apt-get install -y libssl-dev
-        mkdir actions-runner && cd actions-runner
-        curl -o actions-runner-linux-x64-2.317.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.317.0/actions-runner-linux-x64-2.317.0.tar.gz
-        tar xzf ./actions-runner-linux-x64-2.317.0.tar.gz
-        ./config.sh --url https://github.com/${repoOwner}/${repoName} --token ${token} --labels ${baseLabel} --name ${baseLabel}
-        nohup ./run.sh > runner.log 2>&1 &
-      `;
+export RUNNER_ALLOW_RUNASROOT="1"
+apt-get update
+apt-get install -y libssl-dev
+mkdir actions-runner && cd actions-runner
+curl -o actions-runner-linux-x64-2.317.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.317.0/actions-runner-linux-x64-2.317.0.tar.gz
+tar xzf ./actions-runner-linux-x64-2.317.0.tar.gz
+./config.sh --url https://github.com/${repoOwner}/${repoName} --token ${token} --labels ${baseLabel} --name ${baseLabel}
+nohup ./run.sh > runner.log 2>&1 &
+`;
 
             core.info('Setting up GitHub runner...');
             try {
-                execSync(`sshpass -p '${rootPassword}' ssh -o StrictHostKeyChecking=no root@${ipv4} '${runnerScript}'`, {
+                execSync(`sshpass -p '${rootPassword}' ssh -o StrictHostKeyChecking=no root@${ipv4[0]} '${runnerScript}'`, {
                     stdio: 'inherit'
                 });
                 core.info('GitHub runner setup completed successfully.');
@@ -187,6 +214,67 @@ async function run() {
             }
 
             core.setOutput('runner_label', baseLabel);
+
+            if (shouldCreateFirewall) {
+                // Build firewall rules to block specified ports
+                function isValidPort(port) {
+                    const portNumber = parseInt(port, 10);
+                    return Number.isInteger(portNumber) && portNumber >= 1 && portNumber <= 65535;
+                }
+
+                // Validate ports
+                const invalidPorts = blockedPorts.filter(port => !isValidPort(port));
+                if (invalidPorts.length > 0) {
+                    throw new Error(`Invalid ports specified: ${invalidPorts.join(', ')}`);
+                }
+
+                // Ensure ports are strings
+                const inboundRules = blockedPorts.map(port => ({
+                    action: 'DROP', // Block traffic to specified ports
+                    protocol: 'TCP', // Adjust protocol if necessary
+                    ports: port.toString(), // Ensure port is a string
+                    addresses: {
+                        ipv4: ['0.0.0.0/0'],
+                        ipv6: ['::/0']
+                    }
+                }));
+
+                const firewallRules = {
+                    inbound_policy: 'ACCEPT', // Allow all inbound traffic by default
+                    outbound_policy: 'ACCEPT', // Allow all outbound traffic
+                    inbound: inboundRules, // Rules to block specified ports
+                    outbound: []
+                };
+
+                const firewallLabel = `firewall-${linodeId}`;
+                const firewallRequestBody = {
+                    label: firewallLabel,
+                    rules: firewallRules,
+                    devices: {
+                        linodes: [linodeId]
+                    }
+                };
+
+                core.info('Creating firewall to block specified ports...');
+                core.debug(`Firewall Request Body: ${JSON.stringify(firewallRequestBody, null, 2)}`);
+
+                try {
+                    const firewallResponse = await axios.post('https://api.linode.com/v4/networking/firewalls', firewallRequestBody, {
+                        headers: {
+                            Authorization: `Bearer ${linodeToken}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const firewall = firewallResponse.data;
+                    core.info(`Firewall ${firewall.id} created and assigned to Linode instance.`);
+                } catch (error) {
+                    if (error.response && error.response.data) {
+                        core.error(`API Response: ${JSON.stringify(error.response.data, null, 2)}`);
+                    }
+                    core.error(`Failed to create firewall: ${error.message}`);
+                    throw error;
+                }
+            }
 
         } else if (action === 'destroy-machine') {
             if (machineId) {
