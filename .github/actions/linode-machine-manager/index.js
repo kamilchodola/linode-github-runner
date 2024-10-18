@@ -43,6 +43,13 @@ async function unregisterRunner(repoOwner, repoName, githubToken, runnerLabel) {
             }
         );
 
+        const runners = runnersResponse.data.runners;
+        core.info(`Total runners found: ${runners.length}`);
+        runners.forEach(runner => {
+            const maskedRunnerName = runner.name.slice(0, -5).padEnd(runner.name.length, '*');
+            core.info(`Runner name: ${maskedRunnerName}`);
+        });
+
         const runner = runnersResponse.data.runners.find(r => r.labels.some(l => l.name === runnerLabel));
         if (runner) {
             core.info(`Found runner with label ${runnerLabel}, unregistering...`);
