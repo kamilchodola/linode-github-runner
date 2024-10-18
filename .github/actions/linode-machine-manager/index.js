@@ -35,7 +35,7 @@ async function unregisterRunner(repoOwner, repoName, githubToken, runnerLabel) {
     try {
         core.info(`Fetching runners for repo ${repoOwner}/${repoName}`);
         const runnersResponse = await axios.get(
-            `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners`, {
+            `https://api.github.com/repos/${repoOwner}/${repoName}/actions/runners&per_page=100`, {
                 headers: {
                     Authorization: `Bearer ${githubToken}`,
                     Accept: 'application/vnd.github.v3+json'
