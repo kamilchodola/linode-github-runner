@@ -127,7 +127,7 @@ async function fetchAllLinodeInstances() {
     const pageSize = 100;
 
     while (true) {
-        const instances = await getLinodes({ page, pageSize });
+        const instances = await getLinodes({ page: page, page_size: pageSize });
         allInstances = allInstances.concat(instances.data);
 
         if (instances.data.length < pageSize) {
