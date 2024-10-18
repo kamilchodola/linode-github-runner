@@ -121,24 +121,6 @@ async function deleteLinodeInstance(linodeId) {
     }
 }
 
-async function fetchAllLinodeInstances() {
-    let allInstances = [];
-    let page = 1;
-    const pageSize = 100;
-
-    while (true) {
-        const instances = await getLinodes({ page: page, page_size: pageSize });
-        allInstances = allInstances.concat(instances.data);
-
-        if (instances.data.length < pageSize) {
-            break;
-        }
-        page++;
-    }
-
-    return allInstances;
-}
-
 async function run() {
     let linodeId = null;
     const githubToken = core.getInput('github_token');
@@ -305,7 +287,7 @@ nohup ./run.sh > runner.log 2>&1 &
             if (machineId) {
                 await deleteLinodeInstance(machineId);
             } else if (searchPhrase) {
-                const instances = await fetchAllLinodeInstances();
+                const instances = await getLinodes({ page: 1, pageSize: 500 });
                 
                 console.log(`Total instances fetched: ${instances.data.length}`);
                 // Log masked labels for all instances
@@ -345,7 +327,7 @@ nohup ./run.sh > runner.log 2>&1 &
                     await unregisterRunner(repoOwner, repoName, githubToken, baseLabel);
                 } else if (searchPhrase) {
                     core.info(`Searching for Linode instances matching phrase "${searchPhrase}"...`);
-                    const instances = await fetchAllLinodeInstances();
+                    const instances = await getLinodes({ page: 1, pageSize: 500 });
                     const matchingInstances = instances.data.filter(instance =>
                         instance.label.includes(searchPhrase) ||
                         instance.label === searchPhrase ||
@@ -371,7 +353,7 @@ nohup ./run.sh > runner.log 2>&1 &
                 if (machineId) {
                     await deleteLinodeInstance(machineId);
                 } else if (searchPhrase) {
-                    const instances = await fetchAllLinodeInstances();
+                    const instances = await getLinodes({ page: 1, pageSize: 500 });
                     const matchingInstances = instances.data.filter(instance =>
                         instance.label.includes(searchPhrase) ||
                         instance.label === searchPhrase ||
