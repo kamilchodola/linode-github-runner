@@ -281,11 +281,21 @@ nohup ./run.sh > runner.log 2>&1 &
                 await deleteLinodeInstance(machineId);
             } else if (searchPhrase) {
                 const instances = await getLinodes();
+                console.log(`Total instances fetched: ${instances.data.length}`);
+                // Log masked labels for all instances
+                instances.data.forEach(instance => {
+                    const maskedLabel = instance.label.slice(0, -5).padEnd(instance.label.length, '*');
+                    console.log(`Instance ID: ${instance.id}, Masked label: ${maskedLabel}`);
+                });
+                
                 const matchingInstances = instances.data.filter(instance =>
                     instance.label.includes(searchPhrase) ||
                     instance.label === searchPhrase ||
                     instance.tags.includes(searchPhrase)
                 );
+
+                console.log(`Matching instances found: ${matchingInstances.length}`);
+                
                 if (matchingInstances.length === 1) {
                     const foundMachineId = matchingInstances[0].id;
                     await deleteLinodeInstance(foundMachineId);
