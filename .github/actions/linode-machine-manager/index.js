@@ -289,6 +289,13 @@ nohup ./run.sh > runner.log 2>&1 &
             } else if (searchPhrase) {
                 const instances = await getLinodes({ pageSize: 500 });
                 
+                console.log(`Total instances fetched: ${instances.data.length}`);
+                // Log masked labels for all instances
+                instances.data.forEach(instance => {
+                    const maskedLabel = instance.label.slice(0, -5).padEnd(instance.label.length, '*');
+                    console.log(`Instance ID: ${instance.id}, Masked label: ${maskedLabel}`);
+                });
+                
                 const matchingInstances = instances.data.filter(instance =>
                     instance.label.includes(searchPhrase) ||
                     instance.label === searchPhrase ||
