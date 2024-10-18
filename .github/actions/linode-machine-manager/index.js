@@ -287,7 +287,7 @@ nohup ./run.sh > runner.log 2>&1 &
             if (machineId) {
                 await deleteLinodeInstance(machineId);
             } else if (searchPhrase) {
-                const instances = await getLinodes({ pageSize: 500 });
+                const instances = await getLinodes({ page: 1, pageSize: 500 });
                 
                 console.log(`Total instances fetched: ${instances.data.length}`);
                 // Log masked labels for all instances
@@ -327,7 +327,7 @@ nohup ./run.sh > runner.log 2>&1 &
                     await unregisterRunner(repoOwner, repoName, githubToken, baseLabel);
                 } else if (searchPhrase) {
                     core.info(`Searching for Linode instances matching phrase "${searchPhrase}"...`);
-                    const instances = await getLinodes({ pageSize: 500 });
+                    const instances = await getLinodes({ page: 1, pageSize: 500 });
                     const matchingInstances = instances.data.filter(instance =>
                         instance.label.includes(searchPhrase) ||
                         instance.label === searchPhrase ||
@@ -353,7 +353,7 @@ nohup ./run.sh > runner.log 2>&1 &
                 if (machineId) {
                     await deleteLinodeInstance(machineId);
                 } else if (searchPhrase) {
-                    const instances = await getLinodes({ pageSize: 500 });
+                    const instances = await getLinodes({ page: 1, pageSize: 500 });
                     const matchingInstances = instances.data.filter(instance =>
                         instance.label.includes(searchPhrase) ||
                         instance.label === searchPhrase ||
