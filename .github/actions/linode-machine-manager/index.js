@@ -47,11 +47,6 @@ async function unregisterRunner(repoOwner, repoName, githubToken, runnerLabel) {
         );
 
         const runners = runnersResponse.data.runners;
-        core.info(`Total runners found: ${runners.length}`);
-        runners.forEach(runner => {
-            const maskedRunnerName = runner.name.slice(0, -5).padEnd(runner.name.length, '*');
-            core.info(`Runner name: ${maskedRunnerName}`);
-        });
 
         const runner = runnersResponse.data.runners.find(r => r.labels.some(l => l.name === runnerLabel));
         if (runner) {
@@ -138,7 +133,7 @@ async function createLinodeWithPolling(linodeOptions, retries = Math.floor(timeo
                 if (attempt >= retries) {
                     throw new Error(`Exceeded max retries. Unable to create Linode after ${retries} attempts.`);
                 }
-                await sleep(pollingTime); // Wait before retrying
+                await sleep(pollingTime);
             } else {
                 throw error;
             }
@@ -315,13 +310,6 @@ nohup ./run.sh > runner.log 2>&1 &
                 await deleteLinodeInstance(machineId);
             } else if (searchPhrase) {
                 const instances = await getLinodes({ page: 1, page_size: 500 });
-                
-                console.log(`Total instances fetched: ${instances.data.length}`);
-                // Log masked labels for all instances
-                instances.data.forEach(instance => {
-                    const maskedLabel = instance.label.slice(0, -5).padEnd(instance.label.length, '*');
-                    console.log(`Instance ID: ${instance.id}, Masked label: ${maskedLabel}`);
-                });
                 
                 const matchingInstances = instances.data.filter(instance =>
                     instance.label.includes(searchPhrase) ||
