@@ -15,6 +15,9 @@ const sleep = util.promisify(setTimeout);
 const linodeToken = core.getInput('linode_token');
 setToken(linodeToken);
 
+const pollingTime = parseInt(core.getInput('polling_time')) || 20000; // default to 20 seconds if not provided
+const timeout = parseInt(core.getInput('timeout')) || 600000; // default to 10 minutes if not provided (in milliseconds)
+
 async function waitForSSH(ip, rootPassword, retries = 10, delay = 30000, timeout = 30) {
     for (let i = 0; i < retries; i++) {
         try {
@@ -121,6 +124,28 @@ async function deleteLinodeInstance(linodeId) {
     }
 }
 
+async function createLinodeWithPolling(linodeOptions, retries = Math.floor(timeout / pollingTime)) {
+    let attempt = 0;
+    while (attempt < retries) {
+        try {
+            const linode = await createLinode(linodeOptions);
+            core.info(`Linode instance created successfully with ID ${linode.id}`);
+            return linode;
+        } catch (error) {
+            if (error.response && error.response.status === 429) {
+                core.info(`Rate limit hit (429). Retrying in ${pollingTime / 1000} seconds...`);
+                attempt += 1;
+                if (attempt >= retries) {
+                    throw new Error(`Exceeded max retries. Unable to create Linode after ${retries} attempts.`);
+                }
+                await sleep(pollingTime); // Wait before retrying
+            } else {
+                throw error;
+            }
+        }
+    }
+}
+
 async function run() {
     let linodeId = null;
     const githubToken = core.getInput('github_token');
@@ -176,14 +201,16 @@ async function run() {
             }
 
             core.info('Creating new Linode instance...');
-            const linode = await createLinode({
-                region: 'us-east', // Adjust region as needed
+            const linodeOptions = {
+                region: 'us-east',
                 type: machineType,
                 image: image,
                 root_pass: rootPassword,
                 label: baseLabel,
                 tags: tags
-            });
+            };
+
+            const linode = await createLinodeWithPolling(linodeOptions);
 
             linodeId = linode.id;
             const {
