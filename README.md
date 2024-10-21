@@ -20,6 +20,8 @@ This GitHub Action allows you to create and manage Linode machines and set up Gi
 | `organization`   | The GitHub organization name where the self-hosted runner will be registered.                 | Yes      |         |
 | `repo_name`      | The GitHub repository name where the self-hosted runner will be registered.                   | Yes      |         |
 | `blocked_ports`  | Ports to block on firewall.                                                                   | No       |         |
+| `polling_time`   | Time interval in milliseconds between attempts to create Linode machines (to handle rate limits).                   | No      | 20000        |
+| `timeout`        | Maximum time in milliseconds to keep retrying Linode machine creation.                                                                   | No       | 600000        |
 
 ## Outputs
 
@@ -50,6 +52,8 @@ jobs:
           tags: 'ci,runners'
           organization: 'your-org'
           repo_name: 'your-repo'
+          polling_time: 20000
+          timeout: 600000 
 ```
 
 ### Destroy a Linode Machine
