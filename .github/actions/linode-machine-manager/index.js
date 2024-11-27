@@ -197,7 +197,7 @@ async function run() {
 
             core.info('Creating new Linode instance...');
             const linodeOptions = {
-                region: 'us-central',
+                region: 'us-ord',
                 type: machineType,
                 image: image,
                 root_pass: rootPassword,
