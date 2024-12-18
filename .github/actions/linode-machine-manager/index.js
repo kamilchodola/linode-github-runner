@@ -305,21 +305,33 @@ nohup ./run.sh > runner.log 2>&1 &
                 }
             }
 
-        } else if (action === 'destroy-machine') {
+        } else if (action === 'destroy-machine' || action === 'destroy-machine-async') {
+            const isAsync = action === 'destroy-machine-async';
+
             if (machineId) {
-                await deleteLinodeInstance(machineId);
+                if (isAsync) {
+                    deleteLinodeInstanceAsync(machineId);
+                } else {
+                    await deleteLinodeInstance(machineId);
+                }
             } else if (searchPhrase) {
-                const instances = await getLinodes({ page: 1, page_size: 500 });
-                
+                const instances = await getLinodes({
+                    page: 1,
+                    page_size: 500
+                });
                 const matchingInstances = instances.data.filter(instance =>
                     instance.label.includes(searchPhrase) ||
                     instance.label === searchPhrase ||
                     instance.tags.includes(searchPhrase)
                 );
-                
+
                 if (matchingInstances.length === 1) {
                     const foundMachineId = matchingInstances[0].id;
-                    await deleteLinodeInstance(foundMachineId);
+                    if (isAsync) {
+                        deleteLinodeInstanceAsync(foundMachineId);
+                    } else {
+                        await deleteLinodeInstance(foundMachineId);
+                    }
                 } else if (matchingInstances.length === 0) {
                     throw new Error(`No Linode instances found matching the search phrase: ${searchPhrase}`);
                 } else {
@@ -334,15 +346,20 @@ nohup ./run.sh > runner.log 2>&1 &
             } else {
                 throw new Error('Either machine_id or search_phrase must be provided for runner destruction');
             }
-        } else if (action === 'destroy') {
+        } else if (action === 'destroy' || action === 'destroy-async') {
+            const isAsync = action === 'destroy-async';
             let unregisterError = null;
+
             try {
                 if (machineId) {
                     core.info(`Unregistering runner for Linode instance with ID ${machineId}...`);
                     await unregisterRunner(repoOwner, repoName, githubToken, baseLabel);
                 } else if (searchPhrase) {
                     core.info(`Searching for Linode instances matching phrase "${searchPhrase}"...`);
-                    const instances = await getLinodes({ page: 1, page_size: 500 });
+                    const instances = await getLinodes({
+                        page: 1,
+                        page_size: 500
+                    });
                     const matchingInstances = instances.data.filter(instance =>
                         instance.label.includes(searchPhrase) ||
                         instance.label === searchPhrase ||
@@ -366,9 +383,16 @@ nohup ./run.sh > runner.log 2>&1 &
 
             try {
                 if (machineId) {
-                    await deleteLinodeInstance(machineId);
+                    if (isAsync) {
+                        deleteLinodeInstanceAsync(machineId);
+                    } else {
+                        await deleteLinodeInstance(machineId);
+                    }
                 } else if (searchPhrase) {
-                    const instances = await getLinodes({ page: 1, page_size: 500 });
+                    const instances = await getLinodes({
+                        page: 1,
+                        page_size: 500
+                    });
                     const matchingInstances = instances.data.filter(instance =>
                         instance.label.includes(searchPhrase) ||
                         instance.label === searchPhrase ||
@@ -376,7 +400,11 @@ nohup ./run.sh > runner.log 2>&1 &
                     );
                     if (matchingInstances.length === 1) {
                         const foundMachineId = matchingInstances[0].id;
-                        await deleteLinodeInstance(foundMachineId);
+                        if (isAsync) {
+                            deleteLinodeInstanceAsync(foundMachineId);
+                        } else {
+                            await deleteLinodeInstance(foundMachineId);
+                        }
                     }
                 }
             } catch (deleteError) {
@@ -392,7 +420,7 @@ nohup ./run.sh > runner.log 2>&1 &
                 throw unregisterError;
             }
         } else {
-            throw new Error('Invalid action. Use "create", "destroy", "destroy-machine", or "destroy-runner".');
+            throw new Error('Invalid action. Use "create", "destroy", "destroy-machine", "destroy-runner", or their async counterparts.');
         }
     } catch (error) {
         core.setFailed(error.message);
