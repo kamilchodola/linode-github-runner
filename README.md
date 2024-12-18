@@ -86,6 +86,7 @@ jobs:
           repo_name: 'your-repo'
           polling_time: 20000
           timeout: 600000
+```
 
 ### 2. Destroy a Specific Linode Machine and Unregister its Runner
 
@@ -103,7 +104,7 @@ jobs:
           machine_id: '12345'
           organization: 'your-org'
           repo_name: 'your-repo'
-
+```
 
 ### 3. Destroy a Self-Hosted Runner Only
 
@@ -121,6 +122,7 @@ jobs:
           runner_label: 'my-self-hosted-runner'
           organization: 'your-org'
           repo_name: 'your-repo'
+```
 
 ### 4. Use Search Phrase Instead of Machine ID
 
@@ -140,6 +142,7 @@ jobs:
           search_phrase: 'ci'  # Matches by label or tag
           organization: 'your-org'
           repo_name: 'your-repo'
+```
 
 ## Setup and Requirements
 
