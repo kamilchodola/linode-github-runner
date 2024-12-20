@@ -100,11 +100,8 @@ async function unregisterRunner(owner, repo, token, runnerLabel) {
 async function deleteFirewall(linodeId) {
   const firewallLabel = `firewall-${linodeId}`;
   try {
-    const firewallsResponse = await axios.get('https://api.linode.com/v4/networking/firewalls', {
-      headers: { Authorization: `Bearer ${linodeToken}` },
-    });
-
-    const firewall = firewallsResponse.data.data.find(fw => fw.label === firewallLabel);
+    const allFirewalls = await getAllFirewalls();
+    const firewall = allFirewalls.find(fw => fw.label === firewallLabel);
     if (firewall) {
       await axios.delete(`https://api.linode.com/v4/networking/firewalls/${firewall.id}`, {
         headers: { Authorization: `Bearer ${linodeToken}` },
@@ -116,6 +113,31 @@ async function deleteFirewall(linodeId) {
   } catch (error) {
     core.error(`Failed to delete firewall: ${error.message}`);
     throw error;
+  }
+}
+
+/**
+ * Async "fire-and-forget" methods for deletion
+ */
+async function deleteFirewallAsync(linodeId) {
+  const firewallLabel = `firewall-${linodeId}`;
+  try {
+    const allFirewalls = await getAllFirewalls();
+    const firewall = allFirewalls.find(fw => fw.label === firewallLabel);
+
+    if (firewall) {
+      // Fire-and-forget delete request
+      axios.delete(`https://api.linode.com/v4/networking/firewalls/${firewall.id}`, {
+        headers: {
+          Authorization: `Bearer ${linodeToken}`
+        }
+      });
+      core.info(`Async request sent to delete firewall ${firewall.id}.`);
+    } else {
+      core.info(`Firewall with label ${firewallLabel} not found.`);
+    }
+  } catch (error) {
+    core.error(`Failed to send async delete request for firewall: ${error.message}`);
   }
 }
 
@@ -266,28 +288,6 @@ async function findLinodeByPhrase(phrase) {
     instance.tags.includes(phrase)
   );
   return matches;
-}
-
-/**
- * Async "fire-and-forget" methods for deletion
- */
-async function deleteFirewall(linodeId) {
-  const firewallLabel = `firewall-${linodeId}`;
-  try {
-    const allFirewalls = await getAllFirewalls();
-    const firewall = allFirewalls.find(fw => fw.label === firewallLabel);
-    if (firewall) {
-      await axios.delete(`https://api.linode.com/v4/networking/firewalls/${firewall.id}`, {
-        headers: { Authorization: `Bearer ${linodeToken}` },
-      });
-      core.info(`Firewall ${firewall.id} deleted successfully.`);
-    } else {
-      core.info(`Firewall with label ${firewallLabel} not found.`);
-    }
-  } catch (error) {
-    core.error(`Failed to delete firewall: ${error.message}`);
-    throw error;
-  }
 }
 
 /**
