@@ -271,33 +271,28 @@ async function findLinodeByPhrase(phrase) {
 /**
  * Async "fire-and-forget" methods for deletion
  */
-async function deleteFirewallAsync(linodeId) {
+async function deleteFirewall(linodeId) {
   const firewallLabel = `firewall-${linodeId}`;
   try {
-    const firewallsResponse = await axios.get('https://api.linode.com/v4/networking/firewalls', {
-      headers: {
-        Authorization: `Bearer ${linodeToken}`
-      }
-    });
-
-    const firewalls = firewallsResponse.data.data;
-    const firewall = firewalls.find(fw => fw.label === firewallLabel);
-
+    const allFirewalls = await getAllFirewalls();
+    const firewall = allFirewalls.find(fw => fw.label === firewallLabel);
     if (firewall) {
-      // Fire-and-forget delete request
-      axios.delete(`https://api.linode.com/v4/networking/firewalls/${firewall.id}`, {
-        headers: {
-          Authorization: `Bearer ${linodeToken}`
-        }
+      await axios.delete(`https://api.linode.com/v4/networking/firewalls/${firewall.id}`, {
+        headers: { Authorization: `Bearer ${linodeToken}` },
       });
-      core.info(`Async request sent to delete firewall ${firewall.id}.`);
+      core.info(`Firewall ${firewall.id} deleted successfully.`);
     } else {
       core.info(`Firewall with label ${firewallLabel} not found.`);
     }
   } catch (error) {
-    core.error(`Failed to send async delete request for firewall: ${error.message}`);
+    core.error(`Failed to delete firewall: ${error.message}`);
+    throw error;
   }
 }
+
+/**
+ * Delete Linode Instance Asynchronously not to block the thread and to speed up in case it is used as GH runner
+ */
 
 async function deleteLinodeInstanceAsync(linodeId) {
   try {
@@ -315,6 +310,28 @@ async function deleteLinodeInstanceAsync(linodeId) {
     core.error(`Failed to send async delete request for Linode machine: ${error.message}`);
   }
 }
+
+/**
+ * Get All Firewalls with pagination support
+ */
+
+async function getAllFirewalls() {
+  let page = 1;
+  let allFirewalls = [];
+  let hasMore = true;
+
+  while (hasMore) {
+    const response = await axios.get(`https://api.linode.com/v4/networking/firewalls?page=${page}&page_size=100`, {
+      headers: { Authorization: `Bearer ${linodeToken}` },
+    });
+    allFirewalls = allFirewalls.concat(response.data.data);
+    hasMore = response.data.pages > page;
+    page += 1;
+  }
+
+  return allFirewalls;
+}
+
 
 /**
  * Main execution logic
