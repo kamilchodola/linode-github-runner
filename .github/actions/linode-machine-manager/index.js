@@ -174,6 +174,7 @@ async function createLinodeWithPolling(linodeOptions, retries = Math.floor(timeo
         }
         await sleep(pollingTime);
       } else {
+        console.log("Creation failing with error: ", error);
         throw error;
       }
     }
