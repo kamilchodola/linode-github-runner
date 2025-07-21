@@ -156,7 +156,7 @@ async function deleteLinodeInstance(linodeId) {
 }
 
 /**
- * Create a Linode with polling to handle rate limits.
+ * Create a Linode with polling to handle rate limits and transient timeouts.
  */
 async function createLinodeWithPolling(linodeOptions, retries = Math.floor(timeout / pollingTime)) {
   let attempt = 0;
@@ -166,15 +166,21 @@ async function createLinodeWithPolling(linodeOptions, retries = Math.floor(timeo
       core.info(`Linode instance created successfully with ID ${linode.id}`);
       return linode;
     } catch (error) {
-      if (error.response && error.response.status === 429) {
-        core.info(`Rate limit hit (429). Retrying in ${pollingTime / 1000} seconds...`);
-        attempt += 1;
+      const status = error.response?.status;
+      // treat 429 *and* 408 as retryable
+      if (status === 429 || status === 408) {
+        attempt++;
+        core.info(
+          status === 429
+            ? `Rate limit hit (429). Retrying in ${pollingTime / 1000}s…`
+            : `Request timed out (408). Retrying in ${pollingTime / 1000}s…`
+        );
         if (attempt >= retries) {
-          throw new Error(`Exceeded max retries. Unable to create Linode after ${retries} attempts.`);
+          throw new Error(`Exceeded max retries (${retries}). Last error: ${error.message}`);
         }
         await sleep(pollingTime);
       } else {
-        console.log("Creation failing with error: ", error);
+        // non-retryable error => bail out
         throw error;
       }
     }
