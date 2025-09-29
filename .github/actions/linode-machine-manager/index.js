@@ -214,19 +214,31 @@ async function requestGitHubRegistrationToken(owner, repo, token) {
  * Setup GitHub runner on the Linode instance via SSH.
  */
 function setupGitHubRunner(ip, password, owner, repo, token, label) {
+  // Instead of hardcoding, dynamically fetch latest release tag
   const runnerScript = `
     export RUNNER_ALLOW_RUNASROOT="1"
     apt-get update
-    apt-get install -y libssl-dev
-    mkdir actions-runner && cd actions-runner
-    curl -o actions-runner-linux-x64-2.317.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.317.0/actions-runner-linux-x64-2.317.0.tar.gz
-    tar xzf ./actions-runner-linux-x64-2.317.0.tar.gz
+    apt-get install -y curl jq libssl-dev
+    mkdir -p actions-runner && cd actions-runner
+
+    # Get the latest version tag from GitHub API
+    latest_tag=$(curl -s https://api.github.com/repos/actions/runner/releases/latest | jq -r .tag_name)
+
+    echo "Latest runner version: $latest_tag"
+
+    # Download and extract latest runner
+    curl -o actions-runner.tar.gz -L https://github.com/actions/runner/releases/download/$latest_tag/actions-runner-linux-x64-${latest_tag#v}.tar.gz
+    tar xzf ./actions-runner.tar.gz
+
     ./config.sh --url https://github.com/${owner}/${repo} --token ${token} --labels ${label} --name ${label}
     nohup ./run.sh > runner.log 2>&1 &
   `;
 
   core.info('Setting up GitHub runner...');
-  execSync(`sshpass -p '${password}' ssh -o StrictHostKeyChecking=no root@${ip} '${runnerScript}'`, { stdio: 'inherit' });
+  execSync(
+    `sshpass -p '${password}' ssh -o StrictHostKeyChecking=no root@${ip} '${runnerScript}'`,
+    { stdio: 'inherit' }
+  );
   core.info('GitHub runner setup completed successfully.');
 }
 
