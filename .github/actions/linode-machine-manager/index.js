@@ -214,7 +214,6 @@ async function requestGitHubRegistrationToken(owner, repo, token) {
  * Setup GitHub runner on the Linode instance via SSH.
  */
 function setupGitHubRunner(ip, password, owner, repo, token, label) {
-  // Instead of hardcoding, dynamically fetch latest release tag
   const runnerScript = `
     export RUNNER_ALLOW_RUNASROOT="1"
     apt-get update
@@ -224,10 +223,10 @@ function setupGitHubRunner(ip, password, owner, repo, token, label) {
     # Get the latest version tag from GitHub API
     latest_tag=$(curl -s https://api.github.com/repos/actions/runner/releases/latest | jq -r .tag_name)
 
-    echo "Latest runner version: $latest_tag"
+    echo "Latest runner version: \${latest_tag}"
 
     # Download and extract latest runner
-    curl -o actions-runner.tar.gz -L https://github.com/actions/runner/releases/download/$latest_tag/actions-runner-linux-x64-${latest_tag#v}.tar.gz
+    curl -o actions-runner.tar.gz -L https://github.com/actions/runner/releases/download/\${latest_tag}/actions-runner-linux-x64-\${latest_tag#v}.tar.gz
     tar xzf ./actions-runner.tar.gz
 
     ./config.sh --url https://github.com/${owner}/${repo} --token ${token} --labels ${label} --name ${label}
@@ -241,6 +240,7 @@ function setupGitHubRunner(ip, password, owner, repo, token, label) {
   );
   core.info('GitHub runner setup completed successfully.');
 }
+
 
 /**
  * Create a firewall for given Linode instance to block specified ports.
